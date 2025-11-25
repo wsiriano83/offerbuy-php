@@ -1,4 +1,4 @@
-<?php 
+<?php
 class Product
 {
     private $conn;
@@ -26,23 +26,22 @@ class Product
     public function read()
     {
         $query = "SELECT p.*, c.nome as categoria_nome
-        FROM " . $this->table_name . " p 
-        LEFT JOIN categorias c ON p.categoria_id = c.id
-        WHERE p.ativo = 1
-        ORDER BY p.data_cadastro DESC";
-
-    $stmt = $this->conn->prepare($query);
-    $stmt->execute();
-    return $stmt; 
+                    FROM " . $this->table_name . " p 
+                    LEFT JOIN categorias c ON p.categoria_id = c.id
+                    WHERE p.ativo = 1
+                    ORDER BY p.data_cadastro DESC";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt; 
     }
 
-    // Ler todos os produtos por ID
+    // Ler um produto por ID
     public function readOne()
     {
-        $query = "SELECT p.*, c.nome as categorias_nome
-                 FROM " . $this->table_name . " p
-                 LET JOIN categorias c ON p.categoria_id = c.id
-                 WHERE p.id = ? LIMIT 0,1";
+        $query = "SELECT p.*, c.nome as categoria_nome
+                    FROM " . $this->table_name . " p
+                    LEFT JOIN categorias c ON p.categoria_id = c.id
+                    WHERE p.id = ? LIMIT 0,1";
         
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(1, $this->id);
@@ -82,20 +81,21 @@ class Product
         return $stmt;
     }
 
-    // Buscar Produtos
+    // Buscar Produtos - CORRIGIDO
     public function search($keywords)
     {
         $query = "SELECT p.*, c.nome as categoria_nome
                   FROM " . $this->table_name . " p
                   LEFT JOIN categorias c ON p.categoria_id = c.id
-                  WHERE p.ativo = 1 AND (p.nome LIKE ? OR p.descricao LIKE ?)
-                  ORDER BY p.date_cadastro DESC";
+                  WHERE p.ativo = 1 AND (p.nome LIKE ? OR p.descricao LIKE ? OR c.nome LIKE ?)
+                  ORDER BY p.data_cadastro DESC";
         
         $stmt = $this->conn->prepare($query);
 
-        $keywords = "%{keybords}%";
-        $stmt->bindParam(1, $keywords);
-        $stmt->bindParam(2, $keywords);
+        $searchKeywords = "%{$keywords}%";
+        $stmt->bindParam(1, $searchKeywords);
+        $stmt->bindParam(2, $searchKeywords);
+        $stmt->bindParam(3, $searchKeywords);
 
         $stmt->execute();
         return $stmt;
@@ -111,7 +111,7 @@ class Product
         return $stmt;
     }
 
-    // Obter produtos em destaque
+    // Obter produtos em destaque - CORRIGIDO
     public function readFeatured()
     {
         $query = "SELECT p.*, c.nome as categoria_nome
@@ -119,11 +119,39 @@ class Product
                   LEFT JOIN categorias c ON p.categoria_id = c.id
                   WHERE p.ativo = 1
                   ORDER BY p.data_cadastro DESC
-                  LIMIT 4";
+                  LIMIT 8";
+        
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         return $stmt;          
     }
 
+    // Verificar estoque
+    public function checkStock($product_id, $quantity = 1)
+    {
+        $query = "SELECT estoque FROM " . $this->table_name . " WHERE id = ? AND ativo = 1";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(1, $product_id);
+        $stmt->execute();
+        
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($row) {
+            return $row['estoque'] >= $quantity;
+        }
+        
+        return false;
+    }
+
+    // Atualizar estoque
+    public function updateStock($product_id, $new_stock)
+    {
+        $query = "UPDATE " . $this->table_name . " SET estoque = ? WHERE id = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(1, $new_stock);
+        $stmt->bindParam(2, $product_id);
+        
+        return $stmt->execute();
+    }
 }
 ?>

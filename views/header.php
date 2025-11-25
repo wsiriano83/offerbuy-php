@@ -1,80 +1,62 @@
-<?php 
-session_start();
-include_once '../config/database.php';
-include_once '../models/User.php';
+<?php
+// views/header.php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../models/User.php';
 
 $database = new Database();
 $db = $database->getConnection();
-
 $user = new User($db);
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userName = $isLoggedIn ? $_SESSION['user_name'] : '';
 ?>
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OfferBuy</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>OfferBuy - Sua Loja Online</title>
+    <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://unpkg.com/boxicons@latest/css/boxicons.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <header>
-        <a href="index.php" class="logo">
-            <img src="img/Allin onde sem fondo.jpg">
+        <a href="../index.php" class="logo">
+            <img src="../img/Allin onde sem fondo.jpg" alt="OfferBuy Logo">
         </a>
 
         <ul class="navbar">
-            <li><a href="index.php?categorias=1">Roupas</a></li>
-            <li><a href="index.php?categorias=2">Eletrônicos</a></li>
-            <li><a href="index.php?categorias=3">Acessórios</a></li>
-            <li><a href="index.php?categorias=4">Beleza & Moda</a></li>
-            <li><a href="index.php?categorias=5">Eletrodomésticos</a></li>
-            <li><a href="index.php?categorias=6">Ferramentas</a></li>
+            <li><a href="../categoria.php?id=1&nome=roupas">Roupas</a></li>
+            <li><a href="../categoria.php?id=2&nome=eletronicos">Eletrônicos</a></li>
+            <li><a href="../categoria.php?id=3&nome=acessorios">Acessórios</a></li>
+            <li><a href="../categoria.php?id=4&nome=beleza-moda">Beleza & Moda</a></li>
+            <li><a href="../categoria.php?id=5&nome=eletrodomesticos">Eletrodomésticos</a></li>
+            <li><a href="../categoria.php?id=6&nome=ferramentas">Ferramentas</a></li>
         </ul>
 
         <div class="h-btn">
             <?php if($isLoggedIn): ?>
-                <button id="userMenuBtn">Olá, <?php  echo htmlspecialchars($userName); ?></button>
-                <div class="user-menu">
-                    <a href="perfil.php">Meu Perfil</a>
-                    <a href="pedidos.php">Meus Pedidps</a>
-                    <a href="logout.php">Sair</a>
+                <button id="userMenuBtn">Olá, <?php echo htmlspecialchars($userName); ?></button>
+                <div class="user-menu" id="userMenu">
+                    <a href="../perfil.php"><i class='bx bx-user'></i> Meu Perfil</a>
+                    <a href="../pedidos.php"><i class='bx bx-package'></i> Meus Pedidos</a>
+                    <a href="../carrinho.php"><i class='bx bx-cart'></i> Meu Carrinho</a>
+                    <a href="../logout.php"><i class='bx bx-log-out'></i> Sair</a>
                 </div>
+            <?php else: ?>
+                <button id="openPopupBtn">Login / Cadastro</button>
+            <?php endif; ?>
 
-                <?php  else: ?>
-                    <button id="openPopupBtn">Login / Cadastro</button>
-             
-                <!-- Popup de login -->                    
-                <div id="pop-up" class="popup" style="display: none;">
-                    <div class="popup-content">
-                        <span id="closePopupBtn" class="close">&times;</span>
-                        <div class="form-toogle">
-                            <button id="loginToogle" class="toogle active">Login</button>
-                            <button id="signupToggle" class="toogle">Cadastro</button>
-                        </div>
-                        <form id="loginForm" class="form">
-                            <h2>Login</h2>
-                            <input type="email" placeholder="Email" required>
-                            <input type="password" placeholder="Senha" required>
-                            <button type="submit">Entrar</button>
-                        </form>
-                        <form id="signupForm" class="form" style="display: nome;">
-                            <h2>Cadastro</h2>
-                            <input type="text" placeholder="Nome" required>
-                            <input type="email" placeholder="Email" required>
-                            <input type="password" placeholder="Senha" required>
-                            <input type="tel" placeholder="Telefone" required>
-                            <button type="submit">Cadastrar</button>
-                        </form>
-                    </div>
-                </div>
-        <?php endif; ?>
+            <a href="../carrinho.php" class="cart-icon">
+                <i class='bx bx-cart' style="font-size: 24px;"></i>
+                <span id="cart-count" class="cart-count">0</span>
+            </a>
 
-        <div class="bx bx-menu" id="menu-icon"></div>
+            <div class="bx bx-menu" id="menu-icon"></div>
         </div>
     </header>

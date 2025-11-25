@@ -11,20 +11,34 @@ $product = new Product($db);
 
 $isLoggedIn = isset($_SESSION['user_id']);
 $userName = $isLoggedIn ? $_SESSION['user_name'] : '';
+$categoria_id = $_GET['id'] ?? 0;
 
-$keywords = $_GET['q'] ?? '';
+// Mapear IDs para nomes amigáveis
+$nomes_categorias = [
+    1 => 'Roupas',
+    2 => 'Eletrônicos', 
+    3 => 'Acessórios',
+    4 => 'Beleza & Moda',
+    5 => 'Eletrodomésticos',
+    6 => 'Ferramentas'
+];
 
-// Busca
-if (!empty($keywords)) {
+$categoria_nome = $_GET['nome'] ?? 'Categoria';
+
+// Buscar produtos da categoria
+if ($categoria_id > 0 && isset($nomes_categorias[$categoria_id])) {
     try {
-        $stmt = $product->search($keywords);
+        $stmt = $product->readByCategoria($categoria_id);
         $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $categoria_nome = $nomes_categorias[$categoria_id];
     } catch (Exception $e) {
         $produtos = [];
-        error_log("Erro na busca: " . $e->getMessage());
+        error_log("Erro ao buscar categoria: " . $e->getMessage());
     }
 } else {
     $produtos = [];
+    header('Location: index.php');
+    exit;
 }
 ?>
 <!DOCTYPE html>
@@ -32,7 +46,7 @@ if (!empty($keywords)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Busca - OfferBuy</title>
+    <title><?php echo htmlspecialchars($categoria_nome); ?> - OfferBuy</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://unpkg.com/boxicons@latest/css/boxicons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;700&display=swap" rel="stylesheet">
@@ -70,7 +84,6 @@ if (!empty($keywords)) {
 
     <div id="overlay"></div>
 
-    <!-- Popup de Login/Cadastro -->
     <div id="popup" class="popup">
         <div class="popup-content">
             <span id="closePopupBtn" class="close">&times;</span>
@@ -98,56 +111,55 @@ if (!empty($keywords)) {
     </div>
 
     <main style="margin-top: 120px; padding: 20px 5%;">
-        <div class="search-results">
+        <div class="category-results">
             <h2 style="margin-bottom: 30px; text-align: center;">
-                <?php if (!empty($keywords)): ?>
-                    Resultados da Busca para "<?php echo htmlspecialchars($keywords); ?>"
-                <?php else: ?>
-                    Busca de Produtos
-                <?php endif; ?>
+                <?php echo htmlspecialchars($categoria_nome); ?>
             </h2>
 
             <div class="property-content">
                 <?php
-                if (!empty($keywords)) {
-                    if (!empty($produtos)) {
-                        foreach ($produtos as $produto) {
-                            $desconto = '';
-                            if (isset($produto['preco_original']) && $produto['preco_original'] > $produto['preco']) {
-                                $percentual = (($produto['preco_original'] - $produto['preco']) / $produto['preco_original']) * 100;
-                                $desconto = '<span class="desconto">-'.number_format($percentual, 0).'%</span>';
-                            }
+                if (!empty($produtos)) {
+                    foreach ($produtos as $produto) {
+                        $desconto = '';
+                        if (isset($produto['preco_original']) && $produto['preco_original'] > $produto['preco']) {
+                            $percentual = (($produto['preco_original'] - $produto['preco']) / $produto['preco_original']) * 100;
+                            $desconto = '<span class="desconto">-' . number_format($percentual, 0) . '%</span>';
+                        }
+                        
+                        $frete_gratis = (isset($produto['frete_gratis']) && $produto['frete_gratis']) ? '<span class="frete-gratis">Frete Grátis</span>' : '';
+                        
+                        // --- BLOCO DE EXIBIÇÃO DO PRODUTO (Corrigido e robusto) ---
+                        echo '
+                        <div class="row">
                             
-                            $frete_gratis = (isset($produto['frete_gratis']) && $produto['frete_gratis']) ? '<span class="frete-gratis">Frete Grátis</span>' : '';
-                            
-                            echo '
-                            <div class="row" onclick="abrirProduto(' . $produto['id'] . ')">
+                            <a href="produto.php?id=' . $produto['id'] . '">
                                 <div class="product-image">
-                                    <img src="' . ($produto['imagem_url'] ?: 'img/placeholder.jpg') . '" alt="' . $produto['nome'] . '">
+                                    <img src="' . ($produto['imagem_url'] ?: 'img/placeholder.jpg') . '" alt="' . htmlspecialchars($produto['nome']) . '">
                                     ' . $desconto . $frete_gratis . '
                                 </div>
-                                <h5>R$ '. number_format($produto['preco'], 2, ',', '.') . '</h5>
-                                ' . (isset($produto['preco_original']) && $produto['preco_original'] > $produto['preco'] ? 
-                                    '<h6 class="preco-original">De: R$ '. number_format($produto['preco_original'], 2, ',', '.') . '</h6>' : '') . '
-                                <p>' . htmlspecialchars($produto['nome']) . '</p>
-                            </div>';
-                        }
-                    } else {
-                        echo '
-                        <div style="text-align: center; padding: 40px; width: 100%;">
-                            <p style="font-size: 18px; margin-bottom: 20px;">
-                                Nenhum produto encontrado para "' . htmlspecialchars($keywords) . '"
-                            </p>
-                            <a href="index.php" style="background: #FB8929; color: white; padding: 10px 20px;
-                               border-radius: 8px; text-decoration: none;">Voltar à Loja</a>
+                                <p class="product-name">' . htmlspecialchars($produto['nome']) . '</p>
+                            </a> 
+                            
+                            <h5>R$ '. number_format($produto['preco'], 2, ',', '.') . '</h5>
+                            ' . (isset($produto['preco_original']) && $produto['preco_original'] > $produto['preco'] ? 
+                                '<h6 class="preco-original">De: R$ '. number_format($produto['preco_original'], 2, ',', '.') . '</h6>' : '') . '
+                            
+                            <form action="adicionar_carrinho.php" method="post">
+                                <input type="hidden" name="product_id" value="' . $produto['id'] . '">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn-adicionar-carrinho">ADICIONAR AO CARRINHO</button>
+                            </form>
                         </div>';
+                        // --- FIM DO BLOCO ---
                     }
                 } else {
                     echo '
                     <div style="text-align: center; padding: 40px; width: 100%;">
-                        <p style="font-size: 18px; margin-bottom: 20px;">Digite um termo para buscar.</p>
+                        <p style="font-size: 18px; margin-bottom: 20px;">
+                            Nenhum produto encontrado na categoria ' . htmlspecialchars($categoria_nome) . '.
+                        </p>
                         <a href="index.php" style="background: #FB8929; color: white; padding: 10px 20px;
-                           border-radius: 8px; text-decoration: none;">Voltar à Loja</a>
+                            border-radius: 8px; text-decoration: none;">Voltar à Loja</a>
                     </div>';
                 }
                 ?>
@@ -159,13 +171,6 @@ if (!empty($keywords)) {
         <div class="contact">
             <div class="contact-content">
                 <img src="img/Allin onde sem fondo.jpg" alt="Logo OfferBuy">
-                <div class="icons">
-                    <a href="#"><i class='bx bxl-facebook'></i></a>
-                    <a href="#"><i class='bx bxl-instagram-alt'></i></a>
-                    <a href="#"><i class='bx bxl-twitter'></i></a>
-                    <a href="#"><i class='bx bxl-youtube'></i></a>
-                    <a href="#"><i class='bx bxl-linkedin'></i></a>
-                </div>
             </div>
             <div class="contact-content">
                 <h4>Sobre OfferBuy</h4>
@@ -174,19 +179,14 @@ if (!empty($keywords)) {
                 <li><a href="privacidade.php">Política de Privacidade</a></li>
             </div>
             <div class="contact-content">
-                <h4>Métodos de Pagamento</h4>
-                <li><a href="#">Pix</a></li>
-                <li><a href="#">Cartão</a></li>
-                <li><a href="#">Boleto</a></li>
+                <h4>Minha Conta</h4>
+                <li><a href="sobre.php">Meu Perfil</a></li>
+                <li><a href="politica.php">Meus Pedidos</a></li>
+                <li><a href="privacidade.php">Meu Carrinho</a></li>
             </div>
         </div>
     </footer>
 
     <script src="js/main.js"></script>
-    <script>
-    function abrirProduto(id) {
-        window.location.href = 'produto.php?id=' + id;
-    }
-    </script>
 </body>
 </html>
